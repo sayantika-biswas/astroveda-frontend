@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL:'https://clothes-backend-1.onrender.com/api',
+  baseURL:'https://clothes-ecommerce-backend.onrender.com/api',
+  //baseURL:'http://localhost:5001/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
