@@ -13,7 +13,7 @@ import AddressManagement from "./pages/AddressManagement";
 import ReturnPolicy from "./pages/ReturnPolicy";
 import TermsAndConditions from "./pages/TermandCondition";
 import ProductListPage from "./pages/ProductListPage";
-import NavigateproductList from "./pages/NavigateproductList";
+import NavigateProductList from "./pages/NavigateProductList";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import WishlistPage from "./pages/Wishlist";
 import CartPage from "./pages/CartPage";
@@ -42,7 +42,7 @@ const App = () => {
             <Route path="/return-policy" element={<ReturnPolicy />} />
             <Route path="/termsandconditions" element={<TermsAndConditions />} />
             <Route path="/products/:sectionSlug/:categorySlug" element={<ProductListPage />} />
-            <Route path="/:gender/:categorySlug/:subcategorySlug" element={<NavigateproductList />} />
+            <Route path="/:gender/:categorySlug/:subcategorySlug" element={<NavigateProductList />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/wishlist" element={<WishlistPage />} />
             <Route path="/cart" element={<CartPage />} />
