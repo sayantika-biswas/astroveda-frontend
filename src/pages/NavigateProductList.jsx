@@ -1,12 +1,12 @@
-// NavigateproductList.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
+import { Helmet } from 'react-helmet';
 import ProductCard from '../components/ProductCard';
 import ProductFilters from '../components/ProductFilters';
 import { Filter, X } from 'lucide-react';
 import axios from '../utils/axios';
 
-const NavigateproductList = () => {
+const NavigateProductList = () => {
   const { gender, categorySlug, subcategorySlug } = useParams();
   const [products, setProducts] = useState([]);
   const [sortBy, setSortBy] = useState('featured');
@@ -28,6 +28,50 @@ const NavigateproductList = () => {
     colors: [],
     priceRange: [0, 10000]
   });
+
+  // Generate SEO details based on current category and products
+  const generateSEODetails = () => {
+    const brandName = "StyleCart";
+    const productCount = products.length;
+    
+    // Format category names for display
+    const formattedGender = gender?.replace(/-/g, ' ') || '';
+    const formattedCategory = categorySlug?.replace(/-/g, ' ') || '';
+    const formattedSubcategory = subcategorySlug?.replace(/-/g, ' ') || '';
+    
+    // Get unique brands and categories for keywords
+    const uniqueBrands = [...new Set(products.map(p => p.brand))].slice(0, 5);
+    const uniqueColors = [...new Set(products.map(p => p.color))].slice(0, 3);
+
+    if (productCount === 0) {
+      return {
+        title: `${formattedSubcategory || formattedCategory || formattedGender || 'Products'} | StyleCart`,
+        description: `Browse ${formattedSubcategory || formattedCategory || formattedGender || 'products'} collection at StyleCart. Find the latest trends, best deals and premium quality products with free shipping.`,
+        keywords: `${formattedSubcategory}, ${formattedCategory}, ${formattedGender}, fashion, online shopping, StyleCart`
+      };
+    }
+
+    return {
+      title: `Buy ${formattedSubcategory || formattedCategory} Online - ${productCount}+ Products for ${formattedGender} | StyleCart`,
+      description: `Shop ${productCount}+ ${formattedSubcategory || formattedCategory} for ${formattedGender} at StyleCart. Discover ${uniqueBrands.join(', ')} brands in ${uniqueColors.join(', ')} colors. Latest styles ✓ Free shipping ✓ Easy returns ✓ Best prices.`,
+      keywords: `buy ${formattedSubcategory} online, ${formattedCategory} for ${formattedGender}, ${uniqueBrands.join(', ')}, ${formattedSubcategory} shopping, StyleCart`
+    };
+  };
+
+  const seoDetails = generateSEODetails();
+  const brandName = "StyleCart";
+  const canonicalUrl = `${window.location.origin}${window.location.pathname}`;
+
+  // FIX: Update document title immediately when route changes
+  useEffect(() => {
+    document.title = seoDetails.title;
+    
+    // Also update meta description
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute('content', seoDetails.description);
+    }
+  }, [seoDetails.title, seoDetails.description]); // This will trigger on every route change
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -85,17 +129,16 @@ const NavigateproductList = () => {
     });
   };
 
+  // Rest of your existing functions (handleFilterChange, handleClearFilters, etc.)
   const handleFilterChange = (filterType, value) => {
     setFilters(prev => {
       if (filterType === 'price' || filterType === 'discount') {
-        // For radio buttons, set the value directly
         if (filterType === 'price') {
           return { ...prev, price: JSON.stringify(prev.price) === JSON.stringify(value) ? null : value };
         }
         return { ...prev, [filterType]: prev[filterType] === value ? null : value };
       }
       
-      // For array-based filters (brands, sizes, colors)
       const currentArray = prev[filterType] || [];
       const newArray = currentArray.includes(value)
         ? currentArray.filter(item => item !== value)
@@ -118,12 +161,10 @@ const NavigateproductList = () => {
   // Apply filters to products
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
-      // Brand filter
       if (filters.brands.length > 0 && !filters.brands.includes(product.brand)) {
         return false;
       }
 
-      // Size filter
       if (filters.sizes.length > 0) {
         const hasSelectedSize = product.sizes?.some(size => 
           filters.sizes.includes(size.size) && size.inStock
@@ -131,12 +172,10 @@ const NavigateproductList = () => {
         if (!hasSelectedSize) return false;
       }
 
-      // Color filter
       if (filters.colors.length > 0 && !filters.colors.includes(product.color)) {
         return false;
       }
 
-      // Price filter
       if (filters.price) {
         const [minPrice, maxPrice] = filters.price;
         if (product.price < minPrice || product.price > maxPrice) {
@@ -144,7 +183,6 @@ const NavigateproductList = () => {
         }
       }
 
-      // Discount filter
       if (filters.discount && product.discount < filters.discount) {
         return false;
       }
@@ -184,173 +222,270 @@ const NavigateproductList = () => {
       return count;
     }, 0);
   };
+  // Generate structured data for product collection
+const generateStructuredData = () => {
+  const formattedGender = gender?.replace(/-/g, ' ') || '';
+  const formattedCategory = categorySlug?.replace(/-/g, ' ') || '';
+  const formattedSubcategory = subcategorySlug?.replace(/-/g, ' ') || '';
+
+  return [
+    // Collection Page Schema
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "name": `Buy ${formattedSubcategory || formattedCategory} Online for ${formattedGender} | StyleCart`,
+      "description": seoDetails.description,
+      "url": canonicalUrl,
+      "mainEntity": {
+        "@type": "ItemList",
+        "numberOfItems": sortedProducts.length,
+        "itemListElement": sortedProducts.slice(0, 10).map((product, index) => ({
+          "@type": "ListItem",
+          "position": index + 1,
+          "item": {
+            "@type": "Product",
+            "name": product.name,
+            "description": product.description,
+            "url": `${window.location.origin}/product/${product.slug}`,
+            "image": product.images?.[0],
+            "brand": {
+              "@type": "Brand",
+              "name": product.brand
+            },
+            "offers": {
+              "@type": "Offer",
+              "price": product.price,
+              "priceCurrency": "INR",
+              "availability": product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+            }
+          }
+        }))
+      }
+    },
+    // Breadcrumb Schema
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": window.location.origin
+        },
+        formattedGender && {
+          "@type": "ListItem",
+          "position": 2,
+          "name": formattedGender,
+          "item": `${window.location.origin}/${gender}`
+        },
+        formattedCategory && {
+          "@type": "ListItem",
+          "position": 3,
+          "name": formattedCategory,
+          "item": `${window.location.origin}/${gender}/${categorySlug}`
+        },
+        formattedSubcategory && {
+          "@type": "ListItem",
+          "position": 4,
+          "name": formattedSubcategory,
+          "item": canonicalUrl
+        }
+      ].filter(Boolean)
+    }
+  ];
+};
+
+const structuredData = generateStructuredData();
 
   return (
-    <div className="min-h-screen bg-cream-white font-serif">
-      {/* Header Section
-      <div className="border-b border-gray-200">
-        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-light tracking-tight text-gray-900">StyleCart</h1>
-                <p className="text-sm text-gray-600 mt-1">Never Blend In</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Featured Collections</p>
-                <p className="text-sm font-medium text-gray-900 capitalize">
-                  {gender} {categorySlug && `› ${categorySlug}`} {subcategorySlug && `› ${subcategorySlug}`}
-                </p>
-              </div>
+
+    <>
+      <Helmet>
+        <title>{seoDetails.title}</title>
+        <meta name="description" content={seoDetails.description} />
+        <meta name="keywords" content={seoDetails.keywords} />
+        <link rel="canonical" href={canonicalUrl} />
+
+        {/* Open Graph Meta Tags */}
+        <meta property="og:title" content={seoDetails.title} />
+        <meta property="og:description" content={seoDetails.description} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:image" content={`${window.location.origin}/stylecart-og-image.jpg`} />
+        <meta property="og:site_name" content="StyleCart" />
+
+        {/* Twitter Card Meta Tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seoDetails.title} />
+        <meta name="twitter:description" content={seoDetails.description} />
+        <meta name="twitter:image" content={`${window.location.origin}/stylecart-twitter-image.jpg`} />
+
+        {/* Additional SEO Meta Tags */}
+        <meta name="robots" content="index, follow" />
+        <meta name="author" content="StyleCart" />
+        {/* Structured Data for SEO */}
+        {structuredData.map((data, index) => (
+          <script key={index} type="application/ld+json">
+            {JSON.stringify(data)}
+          </script>
+        ))}
+      </Helmet>
+
+      <div className="min-h-screen bg-cream-white font-serif">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 py-8">
+          {/* Hidden SEO Headings */}
+          <h1 className="sr-only">
+            {seoDetails.title}
+          </h1>
+          
+          <div className="flex gap-12">
+            {/* Desktop Filters - Clean Sidebar */}
+            <div className="hidden lg:block w-64 flex-shrink-0">
+              <ProductFilters
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                availableFilters={availableFilters}
+                onClearFilters={handleClearFilters}
+              />
             </div>
-          </div>
-        </div>
-      </div> */}
 
-      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 py-8">
-        <div className="flex  gap-12">
-          {/* Desktop Filters - Clean Sidebar */}
-          <div className="hidden lg:block w-64 flex-shrink-0">
-            <ProductFilters
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              availableFilters={availableFilters}
-              onClearFilters={handleClearFilters}
-            />
-          </div>
+            {/* Mobile Filters Overlay */}
+            {showFilters && (
+              <div className="fixed inset-0 z-50 lg:hidden">
+                <div className="fixed inset-0 bg-black/40 bg-opacity-50" onClick={() => setShowFilters(false)} />
+                <div className="fixed top-0 left-0 h-full w-80 bg-cream-white overflow-y-auto p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <button onClick={() => setShowFilters(false)}>
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+                  <ProductFilters
+                    filters={filters}
+                    onFilterChange={handleFilterChange}
+                    availableFilters={availableFilters}
+                    onClearFilters={handleClearFilters}
+                  />
+                </div>
+              </div>
+            )}
 
-          {/* Mobile Filters Overlay */}
-          {showFilters && (
-            <div className="fixed inset-0 z-50 lg:hidden">
-              <div className="fixed inset-0 bg-black/40 bg-opacity-50" onClick={() => setShowFilters(false)} />
-              <div className="fixed top-0 left-0 h-full w-80 bg-cream-white overflow-y-auto p-6">
-                <div className="flex items-center justify-between mb-6">
-                  {/* <h3 className="text-lg font-medium">FILTERS</h3> */}
-                  <button onClick={() => setShowFilters(false)}>
-                    <X className="w-6 h-6" />
+            {/* Products Section */}
+            <div className="flex-1">
+              {/* Results Header */}
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8">
+                <div>
+                  <h2 className="text-lg font-normal text-gray-900 mb-2 capitalize">
+                    {subcategorySlug ? subcategorySlug.replace(/-/g, ' ') : 'All Products'}
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Showing {sortedProducts.length} products
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-6 mt-4 lg:mt-0">
+                  {/* Mobile Filter Button */}
+                  <button
+                    onClick={() => setShowFilters(true)}
+                    className="lg:hidden flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-sm"
+                    aria-label="Open filters"
+                  >
+                    <Filter className="w-4 h-4" />
+                    <span className="text-sm">Filters</span>
+                    {getActiveFiltersCount() > 0 && (
+                      <span className="bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                        {getActiveFiltersCount()}
+                      </span>
+                    )}
+                  </button>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-600">Sort by</span>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="border-0 bg-transparent text-sm font-normal text-gray-900 focus:outline-none focus:ring-0 py-1"
+                      aria-label="Sort products by"
+                    >
+                      <option value="featured">Relevance</option>
+                      <option value="newest">New In</option>
+                      <option value="price-low-high">Price: Low to High</option>
+                      <option value="price-high-low">Price: High to Low</option>
+                      <option value="rating">Highest Rated</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Filters Bar */}
+              {getActiveFiltersCount() > 0 && (
+                <div className="flex items-center gap-2 mb-6 flex-wrap">
+                  <span className="text-sm text-gray-600">Active filters:</span>
+                  {filters.colors?.map(color => (
+                    <span
+                      key={color}
+                      className="inline-flex items-center px-3 py-1 bg-gray-100 rounded-full text-xs capitalize"
+                    >
+                      {color.toLowerCase()}
+                      <button
+                        onClick={() => handleFilterChange('colors', color)}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
+                        aria-label={`Remove ${color} filter`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  {filters.sizes?.map(size => (
+                    <span
+                      key={size}
+                      className="inline-flex items-center px-3 py-1 bg-gray-100 rounded-full text-xs"
+                    >
+                      {size}
+                      <button
+                        onClick={() => handleFilterChange('sizes', size)}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
+                        aria-label={`Remove ${size} filter`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  <button
+                    onClick={handleClearFilters}
+                    className="text-sm text-gray-600 hover:text-gray-900 underline"
+                  >
+                    Clear all
                   </button>
                 </div>
-                <ProductFilters
-                  filters={filters}
-                  onFilterChange={handleFilterChange}
-                  availableFilters={availableFilters}
-                  onClearFilters={handleClearFilters}
-                />
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* Products Section */}
-          <div className="flex-1">
-            {/* Results Header */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8">
-              <div>
-                <h2 className="text-lg font-normal text-gray-900 mb-2 capitalize">
-                  {subcategorySlug ? subcategorySlug.replace(/-/g, ' ') : 'All Products'}
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Showing {sortedProducts.length} products
-                </p>
+              {/* Products Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                {sortedProducts.map((product) => (
+                  <ProductCard key={product._id} product={product} />
+                ))}
               </div>
 
-              <div className="flex items-center gap-6 mt-4 lg:mt-0">
-                {/* Mobile Filter Button */}
-                <button
-                  onClick={() => setShowFilters(true)}
-                  className="lg:hidden flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-sm"
-                >
-                  <Filter className="w-4 h-4" />
-                  <span className="text-sm">Filters</span>
-                  {getActiveFiltersCount() > 0 && (
-                    <span className="bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {getActiveFiltersCount()}
-                    </span>
-                  )}
-                </button>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-gray-600">Sort by</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="border-0 bg-transparent text-sm font-normal text-gray-900 focus:outline-none focus:ring-0 py-1"
+              {/* No Results */}
+              {sortedProducts.length === 0 && (
+                <div className="text-center py-12">
+                  <div className="text-gray-400 text-sm mb-2">No products found</div>
+                  <p className="text-gray-500 text-sm mb-4">Try adjusting your filters</p>
+                  <button
+                    onClick={handleClearFilters}
+                    className="px-4 py-2 bg-black text-white text-sm rounded-sm hover:bg-gray-800"
                   >
-                    <option value="featured">Relevance</option>
-                    <option value="newest">New In</option>
-                    <option value="price-low-high">Price: Low to High</option>
-                    <option value="price-high-low">Price: High to Low</option>
-                    <option value="rating">Highest Rated</option>
-                  </select>
+                    Clear All Filters
+                  </button>
                 </div>
-              </div>
+              )}
             </div>
-
-            {/* Active Filters Bar */}
-            {getActiveFiltersCount() > 0 && (
-              <div className="flex items-center gap-2 mb-6 flex-wrap">
-                <span className="text-sm text-gray-600">Active filters:</span>
-                {filters.colors?.map(color => (
-                  <span
-                    key={color}
-                    className="inline-flex items-center px-3 py-1 bg-gray-100 rounded-full text-xs capitalize"
-                  >
-                    {color.toLowerCase()}
-                    <button
-                      onClick={() => handleFilterChange('colors', color)}
-                      className="ml-2 text-gray-500 hover:text-gray-700"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-                {filters.sizes?.map(size => (
-                  <span
-                    key={size}
-                    className="inline-flex items-center px-3 py-1 bg-gray-100 rounded-full text-xs"
-                  >
-                    {size}
-                    <button
-                      onClick={() => handleFilterChange('sizes', size)}
-                      className="ml-2 text-gray-500 hover:text-gray-700"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-                <button
-                  onClick={handleClearFilters}
-                  className="text-sm text-gray-600 hover:text-gray-900 underline"
-                >
-                  Clear all
-                </button>
-              </div>
-            )}
-
-            {/* Products Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {sortedProducts.map((product) => (
-                <ProductCard key={product._id} product={product} />
-              ))}
-            </div>
-
-            {/* No Results */}
-            {sortedProducts.length === 0 && (
-              <div className="text-center py-12">
-                <div className="text-gray-400 text-sm mb-2">No products found</div>
-                <p className="text-gray-500 text-sm mb-4">Try adjusting your filters</p>
-                <button
-                  onClick={handleClearFilters}
-                  className="px-4 py-2 bg-black text-white text-sm rounded-sm hover:bg-gray-800"
-                >
-                  Clear All Filters
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
-export default NavigateproductList;
+export default NavigateProductList;
