@@ -3,9 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Heart, Truck, RotateCcw, Store, Star, Calendar, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Helmet } from 'react-helmet-async';
 import axios from '../utils/axios';
-import { useApp } from '../context/AppContext';
 
 const ProductDetailsPage = () => {
     const { productId } = useParams();
@@ -22,14 +20,11 @@ const ProductDetailsPage = () => {
     const [reviews, setReviews] = useState([]);
     const [reviewsLoading, setReviewsLoading] = useState(false);
     const [showAllReviews, setShowAllReviews] = useState(false);
-    
-    const { incrementCartCount, incrementWishlistCount, decrementWishlistCount, refreshCartCount, refreshWishlistCount } = useApp();
 
     useEffect(() => {
         if (productId) {
             fetchProduct();
             fetchReviews();
-            checkWishlistStatus();
         } else {
             setError('No product ID provided');
             setLoading(false);
@@ -46,6 +41,7 @@ const ProductDetailsPage = () => {
             if (response.data.success) {
                 setProduct(response.data.product);
                 
+                // Set first available size
                 if (response.data.product.sizes && response.data.product.sizes.length > 0) {
                     const availableSize = response.data.product.sizes.find(size => size.inStock);
                     if (availableSize) {
@@ -77,17 +73,6 @@ const ProductDetailsPage = () => {
         }
     };
 
-    const checkWishlistStatus = async () => {
-        try {
-            const response = await axios.get(`/wishlist/check/${productId}`);
-            if (response.data.success) {
-                setIsWishlisted(response.data.isWishlisted);
-            }
-        } catch (error) {
-            console.error('Error checking wishlist status:', error);
-        }
-    };
-
     // Calculate average rating from reviews
     const calculateAverageRating = () => {
         if (reviews.length === 0) return 0;
@@ -110,21 +95,18 @@ const ProductDetailsPage = () => {
                 const response = await axios.post('/wishlist/remove', { productId });
                 if (response.data.success) {
                     setIsWishlisted(false);
-                    decrementWishlistCount();
                     toast.success('Removed from wishlist');
                 }
             } else {
                 const response = await axios.post('/wishlist/add', { productId });
                 if (response.data.success) {
                     setIsWishlisted(true);
-                    incrementWishlistCount();
                     toast.success('Added to wishlist');
                 }
             }
         } catch (error) {
             console.error('Error toggling wishlist:', error);
             toast.error('Failed to update wishlist');
-            refreshWishlistCount();
         }
     };
 
@@ -143,9 +125,6 @@ const ProductDetailsPage = () => {
             });
 
             if (response.data.success) {
-                for (let i = 0; i < quantity; i++) {
-                    incrementCartCount();
-                }
                 toast.success('Product added to cart successfully!');
             }
         } catch (error) {
@@ -155,7 +134,6 @@ const ProductDetailsPage = () => {
             } else {
                 toast.error('Failed to add product to cart');
             }
-            refreshCartCount();
         }
     };
 
@@ -192,185 +170,6 @@ const ProductDetailsPage = () => {
         }
     };
 
-    // Generate SEO details
-    const generateSEODetails = () => {
-        if (!product) {
-            return {
-                title: "Loading Product... | StyleCart",
-                description: "Loading product details...",
-                keywords: "product, loading, details"
-            };
-        }
-
-        const averageRating = calculateAverageRating();
-        const totalReviews = reviews.length;
-        const discountPercentage = product.originalPrice > product.price ? 
-            Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : 0;
-
-        return {
-            title: `${product.productName} - Buy Online at ₹${product.price} | StyleCart`,
-            description: `${product.productDescription?.substring(0, 160)}... ${discountPercentage > 0 ? `Get ${discountPercentage}% OFF. ` : ''}Free shipping, easy returns. ${totalReviews > 0 ? `Rated ${averageRating.toFixed(1)}/5 by ${totalReviews} customers.` : ''}`,
-            keywords: `${product.productName}, ${product.brand}, ${product.category}, buy online, fashion, ${product.color}, ${product.sizes?.map(s => s.size).join(', ')}`
-        };
-    };
-
-    // Generate structured data
-    const generateStructuredData = () => {
-        if (!product) return [];
-
-        const averageRating = calculateAverageRating();
-        const totalReviews = reviews.length;
-        const availableSizes = product.sizes?.filter(size => size.inStock) || [];
-        const inStock = availableSizes.length > 0;
-        const brandName = "StyleCart";
-        const canonicalUrl = `${window.location.origin}/product/${productId}`;
-
-        const baseProductSchema = {
-            "@context": "https://schema.org/",
-            "@type": "Product",
-            "name": product.productName,
-            "description": product.productDescription,
-            "image": product.images?.map(img => img.url) || [],
-            "sku": product._id,
-            "brand": {
-                "@type": "Brand",
-                "name": product.brand || brandName
-            },
-            "offers": {
-                "@type": "Offer",
-                "url": canonicalUrl,
-                "priceCurrency": "INR",
-                "price": product.price,
-                "priceValidUntil": new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 year from now
-                "availability": inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-                "seller": {
-                    "@type": "Organization",
-                    "name": brandName
-                }
-            }
-        };
-
-        // Add review data if available
-        if (totalReviews > 0) {
-            baseProductSchema.aggregateRating = {
-                "@type": "AggregateRating",
-                "ratingValue": averageRating.toFixed(1),
-                "reviewCount": totalReviews,
-                "bestRating": "5",
-                "worstRating": "1"
-            };
-
-            baseProductSchema.review = reviews.slice(0, 3).map(review => ({
-                "@type": "Review",
-                "author": {
-                    "@type": "Person",
-                    "name": review.user?.fullName || "Anonymous"
-                },
-                "datePublished": review.createdAt,
-                "reviewBody": review.comment,
-                "name": `Review of ${product.productName}`,
-                "reviewRating": {
-                    "@type": "Rating",
-                    "ratingValue": review.rating,
-                    "bestRating": "5",
-                    "worstRating": "1"
-                }
-            }));
-        }
-
-        // Add additional product properties
-        if (product.color) {
-            baseProductSchema.color = product.color;
-        }
-
-        if (product.category) {
-            baseProductSchema.category = product.category;
-        }
-
-        const schemas = [baseProductSchema];
-
-        // Breadcrumb schema
-        schemas.push({
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            "itemListElement": [
-                {
-                    "@type": "ListItem",
-                    "position": 1,
-                    "name": "Home",
-                    "item": window.location.origin
-                },
-                {
-                    "@type": "ListItem",
-                    "position": 2,
-                    "name": product.category || "Products",
-                    "item": `${window.location.origin}/products${product.category ? `?category=${encodeURIComponent(product.category)}` : ''}`
-                },
-                {
-                    "@type": "ListItem",
-                    "position": 3,
-                    "name": product.productName,
-                    "item": canonicalUrl
-                }
-            ]
-        });
-
-        // FAQ schema for common questions
-        const faqSchema = {
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            "mainEntity": [
-                {
-                    "@type": "Question",
-                    "name": "What is the return policy for this product?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "We offer hassle-free returns within 15 days of delivery. The product must be in original condition with tags attached."
-                    }
-                },
-                {
-                    "@type": "Question",
-                    "name": "Is free shipping available?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "Yes, we offer free shipping on all orders above ₹1699. For orders below this amount, standard shipping charges apply."
-                    }
-                },
-                {
-                    "@type": "Question",
-                    "name": "How can I check delivery availability?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "You can check delivery availability by entering your 6-digit pincode in the delivery check section on the product page."
-                    }
-                }
-            ]
-        };
-
-        schemas.push(faqSchema);
-
-        return schemas;
-    };
-
-    const seoDetails = generateSEODetails();
-    const structuredData = generateStructuredData();
-    const brandName = "StyleCart";
-    const canonicalUrl = `${window.location.origin}/product/${productId}`;
-
-    // Force update document title
-    useEffect(() => {
-        if (!loading && product) {
-            document.title = seoDetails.title;
-            
-            const metaDescription = document.querySelector('meta[name="description"]');
-            if (metaDescription) {
-                metaDescription.setAttribute('content', seoDetails.description);
-            }
-            
-            console.log('🔄 Product SEO title updated to:', seoDetails.title);
-        }
-    }, [loading, product, seoDetails.title, seoDetails.description]);
-
     // Render star rating
     const renderRating = (rating, size = 'w-3 h-3') => {
         return (
@@ -398,7 +197,7 @@ const ProductDetailsPage = () => {
         });
     };
 
-    // Simple Review Component
+    // Simple Review Component (no card)
     const ReviewItem = ({ review }) => (
         <div className="border-b border-gray-100 pb-4 mb-4 last:border-b-0 last:mb-0 last:pb-0">
             <div className="flex items-start justify-between mb-2">
@@ -420,6 +219,12 @@ const ProductDetailsPage = () => {
                         </div>
                     </div>
                 </div>
+                {/* {review.isVerifiedPurchase && (
+                    <div className="flex items-center gap-1 text-green-600 text-xs bg-green-50 px-2 py-1 rounded-full">
+                        <CheckCircle className="w-3 h-3" />
+                        <span>Verified</span>
+                    </div>
+                )} */}
             </div>
 
             <p className="text-gray-700 text-sm leading-relaxed mb-2">
@@ -433,12 +238,12 @@ const ProductDetailsPage = () => {
                             key={index}
                             src={image}
                             alt={`Review ${index + 1}`}
-                            className="w-24 h-24 object-cover cursor-pointer hover:opacity-80 flex-shrink-0"
+                            className="w-24 h-24 object-cover  cursor-pointer hover:opacity-80 flex-shrink-0"
                             onClick={() => window.open(image, '_blank')}
                         />
                     ))}
                     {review.images.length > 3 && (
-                        <div className="w-24 h-24 bg-gray-100 flex items-center justify-center text-xs text-gray-500">
+                        <div className="w-24 h-24 bg-gray-100  flex items-center justify-center text-xs text-gray-500">
                             +{review.images.length - 3}
                         </div>
                     )}
@@ -447,7 +252,7 @@ const ProductDetailsPage = () => {
         </div>
     );
 
-    // Simple Rating Summary
+    // Simple Rating Summary (no card)
     const RatingSummary = () => {
         const averageRating = calculateAverageRating();
         const distribution = getRatingDistribution();
@@ -456,6 +261,7 @@ const ProductDetailsPage = () => {
         return (
             <div className="mb-6">
                 <div className="flex items-center w-80 gap-6">
+                    {/* Overall Rating */}
                     <div className="text-center">
                         <div className="text-4xl font-bold font-sans text-gray-900 mb-1">
                             {averageRating.toFixed(1)}
@@ -466,6 +272,7 @@ const ProductDetailsPage = () => {
                         </div>
                     </div>
 
+                    {/* Rating Distribution */}
                     <div className="flex-1 space-y-1.5">
                         {[5, 4, 3, 2, 1].map((rating) => {
                             const count = distribution[rating];
@@ -497,63 +304,45 @@ const ProductDetailsPage = () => {
 
     if (loading) {
         return (
-            <>
-                <Helmet>
-                    <title>Loading Product... | StyleCart</title>
-                    <meta name="description" content="Loading product details..." />
-                </Helmet>
-                <div className="min-h-screen flex items-center justify-center bg-cream-white">
-                    <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-                        <p className="text-gray-600">Loading product details...</p>
-                    </div>
+            <div className="min-h-screen flex items-center justify-center bg-cream-white">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading product details...</p>
                 </div>
-            </>
+            </div>
         );
     }
 
     if (error) {
         return (
-            <>
-                <Helmet>
-                    <title>Product Not Found | StyleCart</title>
-                    <meta name="description" content="The requested product could not be found." />
-                </Helmet>
-                <div className="min-h-screen flex items-center justify-center bg-cream-white">
-                    <div className="text-center">
-                        <h2 className="text-2xl font-semibold text-gray-700 mb-4">Error Loading Product</h2>
-                        <p className="text-gray-600 mb-6">{error}</p>
-                        <button
-                            onClick={() => navigate('/')}
-                            className="bg-orange-500 text-white px-6 py-3 rounded-md hover:bg-orange-600 transition-colors"
-                        >
-                            Back to Home
-                        </button>
-                    </div>
+            <div className="min-h-screen flex items-center justify-center bg-cream-white">
+                <div className="text-center">
+                    <h2 className="text-2xl font-semibold text-gray-700 mb-4">Error Loading Product</h2>
+                    <p className="text-gray-600 mb-6">{error}</p>
+                    <button
+                        onClick={() => navigate('/')}
+                        className="bg-orange-500 text-white px-6 py-3 rounded-md hover:bg-orange-600 transition-colors"
+                    >
+                        Back to Home
+                    </button>
                 </div>
-            </>
+            </div>
         );
     }
 
     if (!product) {
         return (
-            <>
-                <Helmet>
-                    <title>Product Not Found | StyleCart</title>
-                    <meta name="description" content="The requested product could not be found." />
-                </Helmet>
-                <div className="min-h-screen flex items-center justify-center bg-cream-white">
-                    <div className="text-center">
-                        <h2 className="text-2xl font-semibold text-gray-700 mb-4">Product not found</h2>
-                        <button
-                            onClick={() => navigate('/')}
-                            className="text-orange-500 hover:underline"
-                        >
-                            Back to Home
-                        </button>
-                    </div>
+            <div className="min-h-screen flex items-center justify-center bg-cream-white">
+                <div className="text-center">
+                    <h2 className="text-2xl font-semibold text-gray-700 mb-4">Product not found</h2>
+                    <button
+                        onClick={() => navigate('/')}
+                        className="text-orange-500 hover:underline"
+                    >
+                        Back to Home
+                    </button>
                 </div>
-            </>
+            </div>
         );
     }
 
@@ -564,59 +353,13 @@ const ProductDetailsPage = () => {
     const totalReviews = reviews.length;
 
     return (
-        <>
-            <Helmet>
-                {/* Basic Meta Tags */}
-                <title>{seoDetails.title}</title>
-                <meta name="description" content={seoDetails.description} />
-                <meta name="keywords" content={seoDetails.keywords} />
-                <link rel="canonical" href={canonicalUrl} />
-
-                {/* Open Graph Meta Tags */}
-                <meta property="og:title" content={seoDetails.title} />
-                <meta property="og:description" content={seoDetails.description} />
-                <meta property="og:type" content="product" />
-                <meta property="og:url" content={canonicalUrl} />
-                <meta property="og:image" content={product.images?.[0]?.url} />
-                <meta property="og:site_name" content={brandName} />
-                <meta property="og:price:amount" content={product.price} />
-                <meta property="og:price:currency" content="INR" />
-
-                {/* Twitter Card Meta Tags */}
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:title" content={seoDetails.title} />
-                <meta name="twitter:description" content={seoDetails.description} />
-                <meta name="twitter:image" content={product.images?.[0]?.url} />
-
-                {/* Additional Meta Tags */}
-                <meta name="robots" content="index, follow" />
-                <meta name="author" content={brandName} />
-                <meta name="publisher" content={brandName} />
-
-                {/* Product Specific Meta Tags */}
-                <meta property="product:brand" content={product.brand || brandName} />
-                <meta property="product:availability" content={availableSizes.length > 0 ? "in stock" : "out of stock"} />
-                <meta property="product:condition" content="new" />
-                <meta property="product:retailer_item_id" content={product._id} />
-
-                {/* Structured Data */}
-                {structuredData.map((data, index) => (
-                    <script key={index} type="application/ld+json">
-                        {JSON.stringify(data)}
-                    </script>
-                ))}
-            </Helmet>
-
-            <div className="min-h-screen font-serif bg-cream-white">
-                <ToastContainer
-                    position="top-right"
-                    autoClose={3000}
-                    hideProgressBar={false}
-                    theme="light"
-                />
-
-                {/* Hidden SEO Heading */}
-                <h1 className="sr-only">{product.productName} - Product Details</h1>
+        <div className="min-h-screen font-serif bg-cream-white">
+            <ToastContainer
+                position="top-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                theme="light"
+            />
 
             {/* Breadcrumb Navigation */}
             <div className="bg-cream-white">
@@ -788,15 +531,15 @@ const ProductDetailsPage = () => {
                                     Add to cart
                                 </button>
                                 <button
-                                     onClick={toggleWishlist}
+                                    onClick={toggleWishlist}
                                     className={`p-4 border rounded transition-colors duration-200 ${
-                                    isWishlisted
-                                      ? 'border-red-500 text-red-500 bg-red-50'
-                                     : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:text-red-500'
-                                           }`}
+                                        isWishlisted
+                                            ? 'border-red-500 text-red-500 bg-red-50'
+                                            : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                                    }`}
                                 >
-                                <Heart className={`w-6 h-6 ${isWishlisted ? 'fill-current' : ''}`} />
-                           </button>
+                                    <Heart className={`w-6 h-6 ${isWishlisted ? 'fill-current' : ''}`} />
+                                </button>
                             </div>
 
                             {/* Features */}
@@ -942,9 +685,7 @@ const ProductDetailsPage = () => {
                 </div>
             </div>
         </div>
-         </>
     );
-
 };
 
 export default ProductDetailsPage;

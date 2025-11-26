@@ -3,11 +3,10 @@ import React, { useState, useRef, useEffect } from "react";
 import { User, Heart, ShoppingBag, Search, X, Menu, ChevronDown, ChevronRight, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useApp } from "../context/AppContext"; // Import AppContext
 import { Link } from "react-router-dom";
 import axios from "../utils/axios";
 import MobileSidebar from "./MobileSidebar";
-import SearchBar from "./SearchBar";
+import SearchBar from "./SearchBar"; // Import the new SearchBar component
 
 const Navbar = () => {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -20,11 +19,13 @@ const Navbar = () => {
   const [error, setError] = useState(null);
   
   const { isLoggedIn, user, logout } = useAuth();
-  const { cartCount, wishlistCount } = useApp(); // Use global state
   const dropdownRef = useRef(null);
   const timeoutRef = useRef(null);
   const categoryTimeoutRef = useRef(null);
   const navigate = useNavigate();
+
+  const [cartItemsCount, setCartItemsCount] = useState(0);
+  const [wishlistItemsCount, setWishlistItemsCount] = useState(0);
 
   // Fetch navigation data from API
   useEffect(() => {
@@ -51,6 +52,62 @@ const Navbar = () => {
 
     fetchNavigationData();
   }, []);
+
+  useEffect(() => {
+    // Try to get from localStorage first for instant load
+    const savedCartCount = localStorage.getItem('cartItemsCount');
+    const savedWishlistCount = localStorage.getItem('wishlistItemsCount');
+    if (savedCartCount) {
+      setCartItemsCount(parseInt(savedCartCount));
+    }
+    if (savedWishlistCount) {
+      setWishlistItemsCount(parseInt(savedWishlistCount));
+    }
+
+    // Then fetch fresh data from API
+    fetchCartCount();
+    fetchWishlistCount();
+  }, []);
+
+  const fetchCartCount = async () => {
+    try {
+      const response = await axios.get('/cart');
+      console.log('Cart API Response:', response.data);
+      // Check if response has success field or direct data
+      if (response.data.success) {
+        const count = response.data.cart?.items?.length || 0;
+        setCartItemsCount(count);
+        localStorage.setItem('cartItemsCount', count.toString());
+      } else if (response.data.items) {
+        // Handle case where cart data is directly in response
+        const count = response.data.items.length || 0;
+        setCartItemsCount(count);
+        localStorage.setItem('cartItemsCount', count.toString());
+      }
+    } catch (error) {
+      console.error('Error fetching cart count:', error);
+    }
+  };
+
+  const fetchWishlistCount = async () => {
+    try {
+      const response = await axios.get('/wishlist');
+      console.log('Wishlist API Response:', response.data);
+      // Check if response has success field or direct data
+      if (response.data.success) {
+        const count = response.data.wishlist?.products?.length || 0;
+        setWishlistItemsCount(count);
+        localStorage.setItem('wishlistItemsCount', count.toString());
+      } else if (response.data.products) {
+        // Handle case where wishlist data is directly in response
+        const count = response.data.products.length || 0;
+        setWishlistItemsCount(count);
+        localStorage.setItem('wishlistItemsCount', count.toString());
+      }
+    } catch (error) {
+      console.error('Error fetching wishlist count:', error);
+    }
+  };
 
   const handleLoginRedirect = () => {
     setIsProfileDropdownOpen(false);
@@ -385,9 +442,9 @@ const Navbar = () => {
               title={!isLoggedIn ? "Please login to access wishlist" : "Wishlist"}
             >
               <Heart className="w-5 h-5 text-gray-700" />
-              {wishlistCount > 0 && (
+              {wishlistItemsCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {wishlistCount}
+                  {wishlistItemsCount}
                 </span>
               )}
             </a>
@@ -409,9 +466,9 @@ const Navbar = () => {
               title={!isLoggedIn ? "Please login to access cart" : "Cart"}
             >
               <ShoppingBag className="w-6 h-6" />
-              {cartCount > 0 && (
+              {cartItemsCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {cartCount}
+                  {cartItemsCount}
                 </span>
               )}
             </a>

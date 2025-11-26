@@ -50,11 +50,11 @@ const AddressCard = ({ address, onEdit, onDelete, isDefault }) => {
       <div className="space-y-1 text-sm text-gray-600">
         <p>{address.houseNo}, {address.street}</p>
         {address.landmark && <p>Near {address.landmark}</p>}
-        <p>{address.city}, {address.state} - <span className="font-sans">{address.pincode}</span></p>
+        <p>{address.city}, {address.state} - {address.pincode}</p>
         <p>{address.country}</p>
         <p className="flex items-center space-x-1 mt-2">
           <MapPin className="w-3 h-3" />
-          <span className="font-sans"> Mobile: {address.mobileNumber}</span>
+          <span>Mobile: {address.mobileNumber}</span>
         </p>
       </div>
     </div>

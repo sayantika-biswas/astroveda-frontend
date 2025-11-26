@@ -5,9 +5,7 @@ import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, MapPin, Plus as PlusIcon,
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import axios from '../utils/axios';
-import { Helmet } from 'react-helmet-async';
 import RazorpayPayment from '../components/RazorpayPayment';
-import { useApp } from '../context/AppContext'; // Import AppContext
 
 const CartPage = () => {
     const [cart, setCart] = useState(null);
@@ -41,9 +39,6 @@ const CartPage = () => {
     // Payment states
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [validatingOrder, setValidatingOrder] = useState(false);
-
-    // Use AppContext to update global cart count
-    const { refreshCartCount, decrementCartCount, updateCartCount } = useApp();
 
     useEffect(() => {
         fetchCart();
@@ -175,12 +170,6 @@ const CartPage = () => {
     const updateQuantity = async (itemId, newQuantity) => {
         if (newQuantity < 1) return;
 
-        const currentItem = cart.items.find(item => item._id === itemId);
-        if (!currentItem) return;
-
-        const oldQuantity = currentItem.quantity;
-        const quantityDifference = newQuantity - oldQuantity;
-
         setUpdatingItems(prev => new Set(prev).add(itemId));
         
         try {
@@ -195,23 +184,6 @@ const CartPage = () => {
                 };
                 setCart(filteredCart);
                 toast.success('Cart updated');
-                
-                // Update global cart count based on quantity difference
-                if (quantityDifference > 0) {
-                    // Quantity increased
-                    for (let i = 0; i < quantityDifference; i++) {
-                        // If you have incrementCartCount function, use it here
-                        // Otherwise use updateCartCount with the new total
-                    }
-                } else if (quantityDifference < 0) {
-                    // Quantity decreased
-                    for (let i = 0; i < Math.abs(quantityDifference); i++) {
-                        decrementCartCount();
-                    }
-                }
-                
-                // Refresh global cart count to ensure sync
-                refreshCartCount();
                 
                 // Remove coupon if cart changes
                 if (appliedCoupon) {
@@ -254,15 +226,6 @@ const CartPage = () => {
                     ...response.data.cart,
                 };
                 setCart(filteredCart);
-                
-                // Update global cart count - decrement for each quantity removed
-                for (let i = 0; i < itemToRemove.quantity; i++) {
-                    decrementCartCount();
-                }
-                
-                // Refresh global cart count to ensure sync
-                refreshCartCount();
-                
                 toast.success('Item removed from cart');
                 
                 // Remove coupon if cart changes
@@ -273,8 +236,6 @@ const CartPage = () => {
         } catch (error) {
             console.error('Error removing item:', error);
             toast.error('Failed to remove item');
-            // Refresh global cart count on error to ensure sync
-            refreshCartCount();
         }
     };
 
@@ -283,10 +244,6 @@ const CartPage = () => {
             const response = await axios.delete('/cart/clear');
             if (response.data.success) {
                 setCart(response.data.cart);
-                
-                // Update global cart count to 0
-                updateCartCount(0);
-                
                 toast.success('Cart cleared');
                 
                 if (appliedCoupon) {
@@ -296,8 +253,6 @@ const CartPage = () => {
         } catch (error) {
             console.error('Error clearing cart:', error);
             toast.error('Failed to clear cart');
-            // Refresh global cart count on error to ensure sync
-            refreshCartCount();
         }
     };
 
@@ -466,160 +421,13 @@ const CartPage = () => {
         };
     };
 
-    // Refresh global cart count when component mounts
-    useEffect(() => {
-        refreshCartCount();
-    }, []);
-
-    // Generate SEO details based on cart content
-    const generateSEODetails = () => {
-        const cartItems = cart?.items || [];
-        const itemCount = cartItems.length;
-        const totalItems = cartItems.reduce((total, item) => total + (item.quantity || 1), 0);
-        
-        const brandName = "StyleCart";
-        
-        if (itemCount === 0) {
-            return {
-                title: `Shopping Cart | ${brandName}`,
-                description: `Your shopping cart is empty. Discover amazing fashion products for men, women, and kids at ${brandName}. Free shipping and easy returns.`,
-                keywords: "shopping cart, empty cart, fashion store, online shopping, StyleCart"
-            };
-        }
-
-        // Get product names for description
-        const productNames = cartItems.map(item => item.product?.productName).filter(Boolean).slice(0, 3);
-        const { subtotal, totalProductDiscount, totalAfterProductDiscount } = calculateTotals(cartItems);
-        const finalTotal = Math.max(0, totalAfterProductDiscount - couponDiscount);
-
-        return {
-            title: `Shopping Cart (${itemCount} ${itemCount === 1 ? 'item' : 'items'}) - ₹${finalTotal.toLocaleString()} | ${brandName}`,
-            description: `Your shopping cart at ${brandName} has ${totalItems} products including ${productNames.join(', ')}. Total: ₹${finalTotal.toLocaleString()}. Secure checkout, free shipping, and easy returns.`,
-            keywords: `shopping cart, buy ${productNames.join(', ')}, online shopping, fashion cart, StyleCart`
-        };
-    };
-    const seoDetails = generateSEODetails();
-    // Add this useEffect after your SEO details generation
-useEffect(() => {
-  if (!loading && cart) {
-    // Force update the document title immediately
-    document.title = seoDetails.title;
-    
-    // Also update meta description
-    const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) {
-      metaDescription.setAttribute('content', seoDetails.description);
-    }
-    
-    console.log('🔄 SEO title updated to:', seoDetails.title);
-  }
-}, [loading, cart, seoDetails.title, seoDetails.description]);
-
-    
-    const brandName = "StyleCart";
-    const canonicalUrl = `${window.location.origin}/cart`;
-
-    // Generate structured data for cart
-    const generateStructuredData = () => {
-        const cartItems = cart?.items || [];
-        
-        if (cartItems.length === 0) {
-            return [
-                {
-                    "@context": "https://schema.org",
-                    "@type": "WebPage",
-                    "name": "Shopping Cart - StyleCart",
-                    "description": "Shopping cart page for StyleCart online fashion store",
-                    "url": canonicalUrl
-                }
-            ];
-        }
-
-        const { subtotal, totalProductDiscount, totalAfterProductDiscount } = calculateTotals(cartItems);
-        const finalTotal = Math.max(0, totalAfterProductDiscount - couponDiscount);
-
-        return [
-            // Cart Page Schema
-            {
-                "@context": "https://schema.org",
-                "@type": "WebPage",
-                "name": seoDetails.title,
-                "description": seoDetails.description,
-                "url": canonicalUrl
-            },
-            // Order Schema (for shopping cart)
-            {
-                "@context": "https://schema.org",
-                "@type": "Order",
-                "merchant": {
-                    "@type": "Organization",
-                    "name": "StyleCart",
-                    "url": "https://stylecart.com"
-                },
-                "acceptedOffer": cartItems.map((item, index) => ({
-                    "@type": "Offer",
-                    "itemOffered": {
-                        "@type": "Product",
-                        "name": item.product?.productName,
-                        "description": item.product?.description,
-                        "image": item.product?.images?.[0]?.url,
-                        "brand": {
-                            "@type": "Brand",
-                            "name": item.product?.brand
-                        }
-                    },
-                    "price": item.product?.price,
-                    "priceCurrency": "INR",
-                    "eligibleQuantity": {
-                        "@type": "QuantitativeValue",
-                        "value": item.quantity
-                    }
-                })),
-                "discount": totalProductDiscount + couponDiscount > 0 ? {
-                    "@type": "PriceSpecification",
-                    "price": totalProductDiscount + couponDiscount,
-                    "priceCurrency": "INR"
-                } : undefined,
-                "price": finalTotal,
-                "priceCurrency": "INR"
-            },
-            // Breadcrumb Schema
-            {
-                "@context": "https://schema.org",
-                "@type": "BreadcrumbList",
-                "itemListElement": [
-                    {
-                        "@type": "ListItem",
-                        "position": 1,
-                        "name": "Home",
-                        "item": window.location.origin
-                    },
-                    {
-                        "@type": "ListItem",
-                        "position": 2,
-                        "name": "Shopping Cart",
-                        "item": canonicalUrl
-                    }
-                ]
-            }
-        ];
-    };
-
-    
     if (loading) {
-        return ( 
-            <>
-            <Helmet>
-                    <title>Loading Cart... | StyleCart</title>
-                    <meta name="description" content="Loading your shopping cart..." />
-                </Helmet>
+        return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
-            </div></>
+            </div>
         );
     }
-    
-    const structuredData = generateStructuredData();
 
     const cartItems = cart?.items || [];
     const { subtotal, totalProductDiscount, totalAfterProductDiscount, totalItems } = calculateTotals(cartItems);
@@ -627,39 +435,6 @@ useEffect(() => {
     const totalSavings = totalProductDiscount + couponDiscount;
 
     return (
-        <>
-         <Helmet>
-                {/* Basic Meta Tags */}
-                <title>{seoDetails.title}</title>
-                <meta name="description" content={seoDetails.description} />
-                <meta name="keywords" content={seoDetails.keywords} />
-                <link rel="canonical" href={canonicalUrl} />
-
-                {/* Open Graph Meta Tags */}
-                <meta property="og:title" content={seoDetails.title} />
-                <meta property="og:description" content={seoDetails.description} />
-                <meta property="og:type" content="website" />
-                <meta property="og:url" content={canonicalUrl} />
-                <meta property="og:image" content={`${window.location.origin}/stylecart-cart-og.jpg`} />
-                <meta property="og:site_name" content="StyleCart" />
-
-                {/* Twitter Card Meta Tags */}
-                <meta name="twitter:card" content="summary" />
-                <meta name="twitter:title" content={seoDetails.title} />
-                <meta name="twitter:description" content={seoDetails.description} />
-                <meta name="twitter:image" content={`${window.location.origin}/stylecart-cart-twitter.jpg`} />
-
-                {/* Additional SEO Meta Tags */}
-                <meta name="robots" content="noindex, nofollow" /> {/* Cart pages typically noindex */}
-                <meta name="author" content="StyleCart" />
-
-                {/* Structured Data */}
-                {structuredData.map((data, index) => (
-                    <script key={index} type="application/ld+json">
-                        {JSON.stringify(data)}
-                    </script>
-                ))}
-            </Helmet>
         <div className="min-h-screen bg-cream-white py-8">
             <ToastContainer
                 position="top-right"
@@ -667,8 +442,6 @@ useEffect(() => {
                 hideProgressBar={false}
                 theme="light"
             />
-            {/* Hidden SEO Heading */}
-                <h1 className="sr-only">{seoDetails.title}</h1>
             
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
@@ -772,16 +545,14 @@ useEffect(() => {
                                                 <div className="flex flex-col sm:flex-row gap-4">
                                                     {/* Product Image */}
                                                     <div className="flex-shrink-0">
-                                                        <Link to={`/product/${item.product?._id}`}>
-                                                            <img
-                                                                src={item.product?.images?.[0]?.url || '/placeholder-image.jpg'}
-                                                                alt={item.product?.images?.[0]?.alt || item.product?.productName}
-                                                                className="w-24 h-32 object-cover rounded-md"
-                                                                onError={(e) => {
-                                                                    e.target.src = '/placeholder-image.jpg';
-                                                                }}
-                                                            />
-                                                        </Link>
+                                                        <img
+                                                            src={item.product?.images?.[0]?.url || '/placeholder-image.jpg'}
+                                                            alt={item.product?.images?.[0]?.alt || item.product?.productName}
+                                                            className="w-24 h-32 object-cover rounded-md"
+                                                            onError={(e) => {
+                                                                e.target.src = '/placeholder-image.jpg';
+                                                            }}
+                                                        />
                                                     </div>
 
                                                     {/* Product Details */}
@@ -1180,7 +951,6 @@ useEffect(() => {
                 </div>
             )}
         </div>
-        </>
     );
 };
 

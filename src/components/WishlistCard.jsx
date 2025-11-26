@@ -63,12 +63,11 @@ const WishlistCard = ({ product, onRemoveFromWishlist, onAddToBag }) => {
         <>
             <div className="bg-cream-white font-serif overflow-hidden border border-gray-200 hover:shadow-xl transition-all duration-300">
                 {/* Product Image */}
-                <Link to={`/product/${product._id}`}>
-                    <div 
-                        className="relative overflow-hidden group"
-                        onMouseEnter={() => setIsHovered(true)}
-                        onMouseLeave={() => setIsHovered(false)}
-                    >
+                <div 
+                    className="relative overflow-hidden group"
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                >
                     <button 
                         onClick={() => onRemoveFromWishlist(product._id)} 
                         className="text-red-500 hover:text-red-700 absolute top-2 right-2 z-10 p-2 rounded-full bg-gray-50 border border-gray-200 transition-all duration-300"
@@ -150,10 +149,8 @@ const WishlistCard = ({ product, onRemoveFromWishlist, onAddToBag }) => {
                             </div>
                         </div>
                     )} */}
-                    
                 </div>
-                </Link>
-
+                
                 <div className="flex items-center justify-center border-t border-gray-200">
                     <button 
                         onClick={handleMoveToBag} 

@@ -21,9 +21,6 @@ import ProductDetailsPage from './pages/ProductDetailsPage';
 import OrdersPage from "./pages/OrdersPage";
 import OrderSuccess from "./pages/OrderSuccess";
 import SearchResult from "./pages/SearchResult";
-import FAQ from "./pages/Faq";
-import ShippingInfo from "./pages/ShippingInfo";
-import SizeGuide from "./pages/SizeGuide";
 import "./index.css";
 import 'react-toastify/dist/ReactToastify.css'
 
@@ -44,8 +41,8 @@ const App = () => {
             <Route path="/address-management" element={<AddressManagement />} />
             <Route path="/return-policy" element={<ReturnPolicy />} />
             <Route path="/termsandconditions" element={<TermsAndConditions />} />
-           
-            
+            <Route path="/products/:sectionSlug/:categorySlug" element={<ProductListPage />} />
+            <Route path="/:gender/:categorySlug/:subcategorySlug" element={<NavigateProductList />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/wishlist" element={<WishlistPage />} />
             <Route path="/cart" element={<CartPage />} />
@@ -54,11 +51,6 @@ const App = () => {
             <Route path="/orders/:orderId" element={<OrderSuccess />} />
              {/* Add this search route */}
            <Route path="/search" element={<SearchResult />} />
-            <Route path="/faq" element={<FAQ />} />
-            <Route path="/shipping-info" element={<ShippingInfo />} />
-            <Route path="/size-guide" element={<SizeGuide />} />
-            <Route path="/products/:sectionSlug/:categorySlug" element={<ProductListPage />} />
-            <Route path="/:gender/:categorySlug/:subcategorySlug" element={<NavigateProductList />} />
           </Routes>
         </main>
         <Footer />
