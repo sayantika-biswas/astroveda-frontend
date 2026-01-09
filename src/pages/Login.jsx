@@ -3,6 +3,7 @@ import { Phone, ArrowRight, Shield, Lock, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import axios from '../utils/axios';
 
 const Login = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -30,9 +31,27 @@ const Login = () => {
       try {
         const response = await verifyOTP(phoneNumber, otp);
         toast.success('Login successful!');
-        // Navigate to home or dashboard after successful login
-        setTimeout(() => {
-          navigate('/create-profile');
+        
+        // Check if profile is complete
+        setTimeout(async () => {
+          try {
+            // Fetch user profile to check if it's complete
+            const profileResponse = await axios.get('/auth/userprofile');
+            if (profileResponse.data.success) {
+              const isProfileComplete = profileResponse.data.isProfileComplete;
+              
+              // Redirect based on profile completion status
+              if (isProfileComplete) {
+                navigate('/');  // Redirect to home if profile is complete
+              } else {
+                navigate('/create-profile');  // Redirect to create profile if not complete
+              }
+            }
+          } catch (error) {
+            console.error('Error checking profile:', error);
+            // Default to create-profile if check fails
+            navigate('/create-profile');
+          }
         }, 1500);
       } catch (err) {
         toast.error(err.response?.data?.message || 'Failed to verify OTP');

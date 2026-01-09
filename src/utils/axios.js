@@ -26,24 +26,24 @@ instance.interceptors.request.use(
 );
 
 // Add a response interceptor
-instance.interceptors.response.use(
-  (response) => {
-    // Any status code that lies within the range of 2xx causes this function to trigger
-    return response;
-  },
-  (error) => {
-    // Any status codes that falls outside the range of 2xx causes this function to trigger
-    if (error.response && error.response.status === 401) {
-      // Handle unauthorized errors
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('userProfile');
-      localStorage.removeItem('isProfileComplete');
-      // Redirect to login page
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
+// instance.interceptors.response.use(
+//   (response) => {
+//     // Any status code that lies within the range of 2xx causes this function to trigger
+//     return response;
+//   },
+//   (error) => {
+//     // Any status codes that falls outside the range of 2xx causes this function to trigger
+//     if (error.response && error.response.status === 401) {
+//       // Handle unauthorized errors
+//       localStorage.removeItem('accessToken');
+//       localStorage.removeItem('refreshToken');
+//       localStorage.removeItem('userProfile');
+//       localStorage.removeItem('isProfileComplete');
+//       // Redirect to login page
+//       window.location.href = '/login';
+//     }
+//     return Promise.reject(error);
+//   }
+// );
 
  export default instance;

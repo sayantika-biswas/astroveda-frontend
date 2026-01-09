@@ -20,33 +20,45 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 // Protected Route wrapper using AuthContext
 const ProtectedRoute = ({ element }) => {
   const { isAuthenticated } = useAuth();
-  return isAuthenticated ? element : <Navigate to="/login" replace />;
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return element;
+};
+
+// Main App Routes
+const AppRoutes = () => {
+  return (
+    <>
+      <TopNav/>
+      <div className="min-h-screen bg-gray-950 pt-12">
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/create-profile" element={<CreateProfile />} />
+          
+          {/* Protected Routes */}
+          <Route path="/" element={<ProtectedRoute element={<Home />} />} />
+          <Route path="/kundli" element={<ProtectedRoute element={<Kundli />} />} />
+          <Route path="/kundli-matching" element={<ProtectedRoute element={<KundliMatching />} />} />
+          <Route path="/chats" element={<ProtectedRoute element={<Chats />} />} />
+          <Route path="/profile" element={<ProtectedRoute element={<ProfilePage />} />} />
+          <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
+          <Route path="/rashifal" element={<ProtectedRoute element={<Rashifal />} />} />
+        </Routes>
+        <BottomNav />
+      </div>
+    </>
+  );
 };
 
 function App() {
   return (
     <AuthProvider>
       <Router>
-        
-        <TopNav/>
-        <div className="min-h-screen bg-gray-950 pt-12">
-          
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/create-profile" element={<CreateProfile />} />
-            
-            {/* Protected Routes */}
-            <Route path="/" element={<ProtectedRoute element={<Home />} />} />
-            <Route path="/kundli" element={<ProtectedRoute element={<Kundli />} />} />
-            <Route path="/kundli-matching" element={<ProtectedRoute element={<KundliMatching />} />} />
-            <Route path="/chats" element={<ProtectedRoute element={<Chats />} />} />
-            <Route path="/profile" element={<ProtectedRoute element={<ProfilePage />} />} />
-            <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
-            <Route path="/rashifal" element={<ProtectedRoute element={<Rashifal />} />} />
-          </Routes>
-          <BottomNav />
-        </div>
+        <AppRoutes />
         <ToastContainer
           position="top-right"
           autoClose={3000}

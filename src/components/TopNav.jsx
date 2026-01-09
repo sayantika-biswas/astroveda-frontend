@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Bell, Wallet, Globe, Menu, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import axios from '../utils/axios';
 
 const TopNav = () => {
   const navigate = useNavigate();
@@ -18,16 +19,21 @@ const TopNav = () => {
   ];
 
   useEffect(() => {
-    // Get user data from localStorage
-    const userProfile = localStorage.getItem('userProfile');
-    if (userProfile) {
-      try {
-        setUserData(JSON.parse(userProfile));
-      } catch (error) {
-        console.error('Error parsing user profile:', error);
-      }
-    }
+    // Fetch user data from API
+    fetchUserProfile();
   }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await axios.get('/auth/userprofile');
+      if (response.data.success && response.data.user) {
+        setUserData(response.data.user);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      // If API fails, userData will remain null and we'll show default values
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
