@@ -117,7 +117,7 @@ const RashifalDetail = ({ signId, period, onBack }) => {
           </div>
         </div>
 
-        {/* Period Selector */}
+        {/* Period Selector
         <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
           {['daily', 'weekly', 'monthly', 'yearly'].map((p) => (
             <button
@@ -132,7 +132,7 @@ const RashifalDetail = ({ signId, period, onBack }) => {
               {p.charAt(0).toUpperCase() + p.slice(1)}
             </button>
           ))}
-        </div>
+        </div> */}
 
         {/* Predictions */}
         <div className="mb-6">

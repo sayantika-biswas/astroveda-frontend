@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Phone, ArrowRight, Shield, Lock, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -8,9 +8,23 @@ import axios from '../utils/axios';
 const Login = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const { sendOTP, verifyOTP, loading, error } = useAuth();
   const navigate = useNavigate();
+  
+  // Refs for OTP inputs
+  const otpRefs = useRef([...Array(6)].map(() => React.createRef()));
+
+  // Auto-submit when OTP is completely filled
+  useEffect(() => {
+    if (otpSent && otp.every((digit) => digit !== '')) {
+      // All 6 digits are filled, auto-submit
+      const timer = setTimeout(() => {
+        handleVerifyOTP();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [otp, otpSent]);
 
   const handleSendOTP = async () => {
     if (phoneNumber.length === 10) {
@@ -27,9 +41,10 @@ const Login = () => {
   };
 
   const handleVerifyOTP = async () => {
-    if (otp.length === 6) {
+    const otpString = otp.join('');
+    if (otpString.length === 6) {
       try {
-        const response = await verifyOTP(phoneNumber, otp);
+        const response = await verifyOTP(phoneNumber, otpString);
         toast.success('Login successful!');
         
         // Check if profile is complete
@@ -73,11 +88,34 @@ const Login = () => {
     const formatted = formatPhoneNumber(e.target.value);
     setPhoneNumber(formatted);
   };
+  const handleOtpChange = (index, value) => {
+    // Only allow digits
+    const digit = value.replace(/\D/g, '');
+    
+    if (digit.length <= 1) {
+      const newOtp = [...otp];
+      newOtp[index] = digit;
+      setOtp(newOtp);
+      
+      // Auto-focus to next input if digit is entered
+      if (digit && index < 5) {
+        otpRefs.current[index + 1].current?.focus();
+      }
+    }
+  };
 
-  const handleOtpChange = (e) => {
-    const numbers = e.target.value.replace(/\D/g, '');
-    if (numbers.length <= 6) {
-      setOtp(numbers);
+  const handleOtpKeyDown = (index, e) => {
+    // Handle backspace - move to previous input
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      otpRefs.current[index - 1].current?.focus();
+    }
+    
+    // Handle arrow keys for navigation
+    if (e.key === 'ArrowRight' && index < 5) {
+      otpRefs.current[index + 1].current?.focus();
+    }
+    if (e.key === 'ArrowLeft' && index > 0) {
+      otpRefs.current[index - 1].current?.focus();
     }
   };
 
@@ -152,21 +190,21 @@ const Login = () => {
               
               <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl border border-purple-500/30 p-4">
                 <div className="flex items-center justify-center space-x-3 mb-3">
-                  {[1, 2, 3, 4, 5, 6].map((digit) => (
+                  {[0, 1, 2, 3, 4, 5].map((index) => (
                     <div
-                      key={digit}
-                      className="w-11 h-11 bg-gray-800 rounded-lg border border-purple-500/30 flex items-center justify-center"
+                      key={index}
+                      className="w-11 h-11 bg-gray-800 rounded-lg border border-purple-500/30 flex items-center justify-center hover:border-purple-500/60 transition-colors"
                     >
                       <input
+                        ref={otpRefs.current[index]}
                         type="text"
+                        inputMode="numeric"
                         maxLength="1"
-                        value={otp[digit - 1] || ''}
-                        onChange={(e) => {
-                          const newOtp = otp.split('');
-                          newOtp[digit - 1] = e.target.value.replace(/\D/g, '');
-                          setOtp(newOtp.join(''));
-                        }}
+                        value={otp[index]}
+                        onChange={(e) => handleOtpChange(index, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(index, e)}
                         className="w-full h-full bg-transparent text-center text-xl font-bold text-white outline-none"
+                        placeholder="-"
                       />
                     </div>
                   ))}
@@ -229,7 +267,8 @@ const Login = () => {
               <button
                 onClick={() => {
                   setOtpSent(false);
-                  setOtp('');
+                  setOtp(['', '', '', '', '', '']);
+                  otpRefs.current[0].current?.focus();
                 }}
                 className="text-purple-400 hover:text-purple-300 text-xs transition-colors"
               >

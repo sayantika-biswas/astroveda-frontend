@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }) => {
     setRefreshToken(null);
   };
 
-  const isAuthenticated = !!accessToken && !!user;
+  const isAuthenticated = !!accessToken ;
 
   return (
     <AuthContext.Provider

@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import Login from './pages/Login'
@@ -30,10 +30,16 @@ const ProtectedRoute = ({ element }) => {
 
 // Main App Routes
 const AppRoutes = () => {
+  const location = useLocation();
+  
+  // Routes where we don't show TopNav and BottomNav
+  const hiddenNavRoutes = ['/login', '/create-profile'];
+  const shouldHideNav = hiddenNavRoutes.includes(location.pathname);
+  
   return (
     <>
-      <TopNav/>
-      <div className="min-h-screen bg-gray-950 pt-12">
+      {!shouldHideNav && <TopNav />}
+      <div className={shouldHideNav ? 'min-h-screen bg-gray-950' : 'min-h-screen bg-gray-950 pt-12'}>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
@@ -48,7 +54,7 @@ const AppRoutes = () => {
           <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
           <Route path="/rashifal" element={<ProtectedRoute element={<Rashifal />} />} />
         </Routes>
-        <BottomNav />
+        {!shouldHideNav && <BottomNav />}
       </div>
     </>
   );
