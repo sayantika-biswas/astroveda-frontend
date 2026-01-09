@@ -182,7 +182,7 @@ const CreateProfile = () => {
         alert('Profile created successfully!');
         
         // Navigate to dashboard
-        navigate('/dashboard');
+        navigate('/');
       } else {
         throw new Error(response.data.message || 'Failed to create profile');
       }
@@ -491,7 +491,7 @@ const CreateProfile = () => {
             <div className="text-center">
               <button
                 type="button"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/')}
                 disabled={isLoading}
                 className="text-purple-400 hover:text-purple-300 text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
