@@ -1,63 +1,63 @@
-import React from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import { ToastContainer } from 'react-toastify';
-import Navbar from "./components/Navbar";
-import Home from "./pages/Home";
-import Footer from "./components/Footer";
-import LoginForm from "./pages/Login";
-import AboutUs from "./pages/AboutUs";
-import ForgotPassword from "./pages/ForgetPassword";
-import ResetPassword from "./pages/ResetPassword";
-import ContactUs from "./pages/ContactUs";
-import AddressManagement from "./pages/AddressManagement";
-import ReturnPolicy from "./pages/ReturnPolicy";
-import TermsAndConditions from "./pages/TermandCondition";
-import ProductListPage from "./pages/ProductListPage";
-import NavigateProductList from "./pages/NavigateProductList";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import WishlistPage from "./pages/Wishlist";
-import CartPage from "./pages/CartPage";
-import ProductDetailsPage from './pages/ProductDetailsPage';
-import OrdersPage from "./pages/OrdersPage";
-import OrderSuccess from "./pages/OrderSuccess";
-import SearchResult from "./pages/SearchResult";
-import "./index.css";
+import React from 'react'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
+import Login from './pages/Login'
+import CreateProfile from './pages/CreateProfile'
+import Dashboard from './pages/Dashboard'
+import Home from './pages/Home'
+import Kundli from './pages/Kundli'
+import Rashifal from './pages/Rashifal'
+import TopNav from './components/TopNav'
+import BottomNav from './components/BottomNav'
+import KundliMatching from './pages/KundliMatching'
+import Chats from './pages/chats'
+import Settings from './pages/Settings'
+import ProfilePage from './pages/ProfilePage'
 
+import { AuthProvider } from './context/AuthContext'
 
-const App = () => {
+function App() {
   return (
-    <Router>
-      <div className="bg-cream-white m-0 p-0">
-        <Navbar />
-        <main className=" pt-16 sm:pt-12 md:pt-20 lg:pt-20 m-0 p-0 ">
+    <AuthProvider>
+      <Router>
+        
+        <TopNav/>
+        <div className="min-h-screen bg-gray-950 pt-12">
+          
           <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/create-profile" element={<CreateProfile />} />
+            {/* <Route path="/dashboard" element={<Dashboard />} /> */}
             <Route path="/" element={<Home />} />
-            <Route path="/login" element={<LoginForm />} />
-            <Route path="/about-us" element={<AboutUs />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/contact-us" element={<ContactUs />} />
-            <Route path="/address-management" element={<AddressManagement />} />
-            <Route path="/return-policy" element={<ReturnPolicy />} />
-            <Route path="/termsandconditions" element={<TermsAndConditions />} />
-            <Route path="/products/:sectionSlug/:categorySlug" element={<ProductListPage />} />
-            <Route path="/:gender/:categorySlug/:subcategorySlug" element={<NavigateProductList />} />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/wishlist" element={<WishlistPage />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route path="/product/:productId" element={<ProductDetailsPage />} />
-            <Route path="/orders" element={<OrdersPage />} />
-            <Route path="/orders/:orderId" element={<OrderSuccess />} />
-             {/* Add this search route */}
-           <Route path="/search" element={<SearchResult />} />
-          </Routes>
-        </main>
-        <Footer />
-        <ToastContainer />
-      </div>
-    </Router>
-  );
-};
+            <Route path="/kundli" element={<Kundli />} />
+            <Route path="/kundli-matching" element={<KundliMatching />} />
+            <Route path="/chats" element={<Chats />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/rashifal" element={<Rashifal />} />
 
-export default App;
+             
+            
+          </Routes>
+          <BottomNav />
+        </div>
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="dark"
+        />
+      </Router>
+    </AuthProvider>
+  )
+}
+
+export default App

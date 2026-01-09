@@ -1,9 +1,9 @@
-import axios from 'axios';
+ import axios from 'axios';
 
 const instance = axios.create({
-  baseURL:'https://clothes-ecommerce-backend.onrender.com/api',
-  //baseURL:'http://localhost:5001/api',
-  timeout: 10000,
+   //baseURL:'https://clothes-ecommerce-backend.onrender.com/api',
+   baseURL:'http://localhost:5101/api',
+//   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -13,7 +13,7 @@ const instance = axios.create({
 instance.interceptors.request.use(
   (config) => {
     // Do something before request is sent
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -35,7 +35,9 @@ instance.interceptors.request.use(
 //     // Any status codes that falls outside the range of 2xx causes this function to trigger
 //     if (error.response && error.response.status === 401) {
 //       // Handle unauthorized errors
-//       localStorage.removeItem('token');
+//       localStorage.removeItem('accessToken');
+//       localStorage.removeItem('refreshToken');
+//       localStorage.removeItem('user');
 //       // window.location.href = '/login';
 //     }
 //     return Promise.reject(error);
